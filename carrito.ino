@@ -111,17 +111,22 @@ byte shiftOptions = 0;      // shift register options, you can only set
                             // the lower four, the upper four are the
                             // direction motor control bits
 
+// Serial DEBUG
+//~ #define SDEBUG      0
 
 /************************************************************************/
 
 
 // set motion speed, just set the PWM value against the limit
-void setSpeed(byte val) {
+void setSpeed(int val) {
+    // local var
+    byte lval = byte(abs(val));
+
     // set global var value
-    speed = map(val, 0, 255, 0, maxSpeed);
+    byte lspeed = map(lval, 0, 255, 0, maxSpeed);
 
     // apply
-    analogWrite(motorSpeedPin, speed);
+    analogWrite(motorSpeedPin, lspeed);
 }
 
 
@@ -166,7 +171,7 @@ void rxCommand() {
             }
 
             // set speed
-            setSpeed(abs(speed));
+            setSpeed(speed);
         }
 
         // set turn direction
@@ -180,6 +185,12 @@ void rxCommand() {
 
         // set options to this
         //~ setOptions(_radioData.options);
+
+        // DEBUG
+        #ifdef SDEBUG
+        Serial.println(speed);
+        Serial.println(direction);
+        #endif
     }
 }
 
@@ -288,7 +299,9 @@ void shiftOut() {
 
 void setup () {
     // serial console
+    #ifdef SDEBUG
     Serial.begin(9600);
+    #endif
 
     // init the NRF radio
     /*****
@@ -309,12 +322,16 @@ void setup () {
      *             NRFLite::BITRATE2MBPS, 100)
      *******/
     if (!_radio.init(RADIO_ID, PIN_RADIO_CE, PIN_RADIO_CSN, NRFLite::BITRATE250KBPS, 52)) {
+        #ifdef SDEBUG
         Serial.println("Cannot communicate with radio");
+        #endif
         while (1); // Wait here forever.
     }
 
     // Radio initialized ok
+    #ifdef SDEBUG
     Serial.println("Radio init done.");
+    #endif
 
     // direction motor
     pinMode(dirLatch, OUTPUT);
@@ -346,7 +363,9 @@ void setup () {
 
 void loop () {
     // Every 500 miliseconds, do a measurement using the sensor and print the distance in centimeters.
+    //~ #ifdef SDEBUG
     //~ Serial.println(distanceSensor.measureDistanceCm());
+    //~ #endif
     //~ delay(500);
 
     // receive data from remote control
