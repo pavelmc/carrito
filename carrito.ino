@@ -73,6 +73,8 @@ struct RadioPacket {
     bool speed_hold;
     int turn;
     bool turn_hold;
+    bool stop = 0;
+    bool lookAhead = 0;
     unsigned long options;
 };
 
@@ -152,6 +154,28 @@ void rxCommand() {
         // reset the serial
         pktSerial = _radioData.serial;
 
+        /**** priority commands first and will exit the loop ****/
+
+        // Stop
+        if (_radioData.stop) {
+            // stop motor
+            setDirection(0);
+            setSpeed(0);
+            // set env vars
+            speed = 0;
+
+            // exit loop
+            break;
+        }
+
+        // look ahead
+        if (_radioData.lookAhead) {
+            // call the procedure tolookahead
+            dirTofont();
+            // exit loop
+            break;
+        }
+
         // set speed to this
         if (_radioData.speed != 0) {
             // calc speed
@@ -179,8 +203,10 @@ void rxCommand() {
             // move off limits if on limit
             if (checkLimit != 0) moveOffLimit();
 
+            // update the local var
+            turn = _radioData.turn;
             // move the front wheels
-            dirMot.steps(_radioData.turn);
+            dirMot.steps(turn);
         }
 
         // set options to this
@@ -255,21 +281,30 @@ bool center() {
 
 // Move direction to the front position
 void dirTofont() {
+    // local var
+    int steps = 0;
+
     // check if we are already up front
     if (!center()) {
         //  move full left until center or limit switch
         moveOffLimit();
-        dirMot.steps(500);
+        // conditional move in the logic direction
+        if (turn <= 0) steps = 500;
+        if (turn > 0) steps = -500;
+        dirMot.steps(steps);
         doMove(1);
 
         // it didn't hit center? sweep in the other direction
         if (!center()) {
             // now only dir is right until center or limit switch
             moveOffLimit();
-            dirMot.steps(-500);
+            dirMot.steps((int)0 - steps);
             doMove(1);
         }
     }
+
+    // once done reset turn to center
+    turn = 0;
 }
 
 
