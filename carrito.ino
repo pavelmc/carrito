@@ -158,7 +158,10 @@ void motionStop() {
 
     // stop the motor, stop speed
     speed = 0;
-    setSpeed(abs(speed) * 3);
+    // the increment factor depends on inertia and hance on the weight
+    // of the car, you must tweak it to suit your needs, mine in
+    // bare-bones is about 5, with full chassis must be higher
+    setSpeed(abs(speed) * 5);
 }
 
 // do turns
