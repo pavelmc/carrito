@@ -25,7 +25,7 @@
  * and will fire 0 or 1023 on each switch hit
  *
  * ** CENTER HALL sensor***
- * 4 - Will be low when direction is centered
+ * 2 - Will be low when direction is centered
  *
  * *** ULTRASONIC RADAR ***
  * 5 - trigger
@@ -97,10 +97,11 @@ stepperunipolar dirMot(UNIPOLAR_WAVE);
 #define motorDirectionPin (5)       // set the direction of rotation
 #define maxSpeed          (255)     // maximum speed
 #define dirLimitPin       (A3)      // Analog pin for limit switches
-#define dirHall           (4)       // pin in wich is the front hall
+#define dirHall           (2)       // pin in wich is the front hall
 #define dirLatch          (8)       // latch or CS for the shift register
 
 // Variables
+volatile bool center = false; // changed by an interrupt, must be reset after read high
 unsigned long pktSerial = 0; // serial to sign for duplicated packets
 int speed = 0;               // will be mapped from -255 to 0-255
 int turn = 0;                // this will be steps in each direction
@@ -118,6 +119,10 @@ byte shiftOptions = 0;      // shift register options, you can only set
 
 /************************************************************************/
 
+// interrupt rutine
+void centerHit() {
+    center = true;
+}
 
 // set motion speed, just set the PWM value against the limit
 void setSpeed(int val) {
@@ -142,6 +147,37 @@ void setDirection(bool dir) {
 }
 
 
+// stop motion of the motor
+void motionStop() {
+    // invert the motor direction for a brief time
+    // keep the speed
+    setDirection(!direction);
+
+    // delay proportional to the speed
+    delay(abs(speed));
+
+    // stop the motor, stop speed
+    speed = 0;
+    setSpeed(abs(speed) * 3);
+}
+
+// do turns
+void doturn(int t) {
+    /** turn only in possible directions **/
+    int lPos = checkLimit();
+
+    // hit right and commanded right, not possible
+    if (lPos == 1 and t > 0) return;
+
+    // hit left and commanded left, not possible
+    if (lPos == -1 and t < 0) return;
+
+    // middle position, do move to either way
+    turn = t;
+    dirMot.steps(turn);
+}
+
+
 // receive data from the remote control unit
 void rxCommand() {
     // data will be set into a buffer and process flag will be rised
@@ -159,14 +195,14 @@ void rxCommand() {
         // Stop
         if (_radioData.stop) {
             // stop motor
-            setDirection(0);
-            setSpeed(0);
-            // set env vars
-            speed = 0;
+            motionStop();
 
             // exit loop
             break;
         }
+
+
+        /**** normal commands   ****/
 
         // look ahead
         if (_radioData.lookAhead) {
@@ -200,13 +236,8 @@ void rxCommand() {
 
         // set turn direction
         if (_radioData.turn != 0) {
-            // move off limits if on limit
-            if (checkLimit != 0) moveOffLimit();
-
-            // update the local var
-            turn = _radioData.turn;
-            // move the front wheels
-            dirMot.steps(turn);
+            // doturn
+            doturn(_radioData.turn);
         }
 
         // set options to this
@@ -227,81 +258,47 @@ char checkLimit() {
     int ana = analogRead(dirLimitPin);
 
     // check limits
-    if (ana < 200) return -1;
-    if (ana > 823) return  1;
+    if (ana < 200) return -1;   // left
+    if (ana > 823) return  1;   // right
 
     // if not in range just return zero
     return 0;
 }
 
 
-// move until limits or movement end
-// if you pass true it will stop at center
-void doMove(bool c) {
-    // do the job
-    while(dirMot.busy()) {
-        // check for motor movement
-        dirMot.check();
-
-        // center
-        if (c and center()) break;
-
-        // limit?
-        if (checkLimit() != 0) break;
-    }
-
-    // stop the motor, limit hit
-    dirMot.stop();
-}
-
-
-// move off limit
-void moveOffLimit() {
-    // move off limit
-    while(checkLimit() != 0) {
-        if (checkLimit() > 0) {
-            // move to left 40 points
-            dirMot.steps(-40);
-        } else {
-            // move to right 40 points
-            dirMot.steps(40);
-        }
-
-        // check for moves
-        dirMot.check();
-    }
-}
-
-
-// returns true is we are facing forward
-bool center() {
-    return !digitalRead(dirHall);
-}
-
-
 // Move direction to the front position
 void dirTofont() {
-    // local var
-    int steps = 0;
+    // check if we are already looking forward
+    if (digitalRead(dirHall) == 0) return;
 
-    // check if we are already up front
-    if (!center()) {
-        //  move full left until center or limit switch
-        moveOffLimit();
-        // conditional move in the logic direction
-        if (turn <= 0) steps = 500;
-        if (turn > 0) steps = -500;
-        dirMot.steps(steps);
-        doMove(1);
+    // local var to set the direction
+    int steps = 500;
+    if (turn > 0) steps = -500;
 
-        // it didn't hit center? sweep in the other direction
-        if (!center()) {
-            // now only dir is right until center or limit switch
-            moveOffLimit();
-            dirMot.steps((int)0 - steps);
-            doMove(1);
+    // move
+    doturn(steps);
+
+    // move to center
+    while(!center) {
+        // motor move
+        dirMot.check();
+
+        // check limit hit
+        if (checkLimit() > 0) {
+            // right limit hit, move left
+            doturn(-500);
+        }
+
+        // check limit hit
+        if (checkLimit() < 0) {
+            // left limit hit, move right
+            doturn(500);
         }
     }
+
+    // reset the center flag
+    dirMot.stop();
+    center = false;
 
     // once done reset turn to center
     turn = 0;
@@ -330,7 +327,6 @@ void shiftOut() {
 }
 
 /************************************************************************/
-
 
 void setup () {
     // serial console
@@ -374,14 +370,15 @@ void setup () {
     // set call back function
     dirMot.addCallBack(dirShiftOut);
     // set speed in steps per one second (1000 Max)
-    dirMot.speed(100);
+    dirMot.speed(80);
     // set steps per turn
     dirMot.stepsPerTurn = 200;
     // set eco mode, just power during the move, on idle poweroff
     dirMot.eco = true;
 
-    // hal sensor setup
+    // hal sensor setup (FALLING, it's normally high)
     pinMode(dirHall, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(dirHall), centerHit, FALLING);
 
     // delay to allow for settling.
     delay(500);
@@ -408,7 +405,4 @@ void loop () {
 
     // check async to do the move
     dirMot.check();
-
-    // check if we are in turn limits ans stop motor.
-    if (checkLimit() != 0) dirMot.stop();
 }
