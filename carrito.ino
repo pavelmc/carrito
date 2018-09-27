@@ -33,9 +33,9 @@
  *
  */
 
-/***** SONAR *****/
-#include <HCSR04.h>
-UltraSonicDistanceSensor distanceSensor(5, 6);
+//~ /***** SONAR *****/
+//~ #include <HCSR04.h>
+//~ UltraSonicDistanceSensor distanceSensor(5, 6);
 
 /***** NRF24L01 *****/
 #include <SPI.h>
