@@ -1,4 +1,4 @@
-#Carrito (Spanish for Small car)#
+# Carrito (Spanish for Small car) #
 
 ![](https://raw.github.com/pavelmc/carrito/master/photos/bare-bones-car.jpg)
 
@@ -8,7 +8,7 @@ You can take a peek at the (always evolving) fritzing file in the "extra" direct
 
 The main motivations to make this car is the fact that I haven't a cool Arduino project to display... I also confess that I didn't had a remote controlled car as a child so I made this to my children also.
 
-#Dependencies#
+# Dependencies #
 
 If you want to build or test this you will need a few extra things not in this repository:
 
@@ -16,7 +16,7 @@ If you want to build or test this you will need a few extra things not in this r
 * A custom lib to command the stepper motor, its called [stepperUnipolar](https://github.com/pavelmc/stepperUnipolar) and has some nice features.
 * A library to control the nRF24l01 device, I use the nRFLite lib, you can find it on the Arduino IDE Library manager.
 
-#Actual Hardware#
+# Actual Hardware #
 
 **Power source:** Laptop batteries; I have become a recycle fan of laptop batteries on any kind for many uses, I have it from 1.2Ah to 2.5Ah, in this case I chose 4 cells is 2P2S mode of 2.2Ah, that gives a total of 6.0 to 8.4 V at up to 4.4 Ah, that's plenty of power for the task.
 
@@ -48,11 +48,11 @@ This hall sensor triggers a pin low once the direction is facing forward, as sim
 
 **Remote control:** the remote control is designed/made from day one using a pair of nRF24L01 modules at 250 kbps, more than the needed for the task. I tested a lot of libs for this modules and ended using the nrflite one by his final small size firmware and easy programming.
 
-#No Go Hardware & Failed tries#
+# No Go Hardware & Failed tries #
 
 This is a list of failed tries of hardware and ideas and his explanation (you can find images of the items described here in the folder no-go-and-failures)
 
-##Power inversion for the power motor##
+## Power inversion for the power motor ##
 
 First try was using 12V Relays from a UPS, it consumes only 28mA to drive the coil and can handle up to 10A, driver circuit is just a transistor connected to the Arduino, so it was a nice idea, but not in practice.
 
@@ -72,13 +72,13 @@ So big and hot, yet I need a PNP transistor to control the +Vcc with the PWM of 
 
 That is just 3 pairs of N and P channel matched MOSFETS (7 Amps One and a half H-bridge) so I can wire the H-bridge and the remaining P-channel mosfet to control the PWM, results: under 1mA on standby and losses are under 100mW on work at 1A (no perceptible warm on full power drive), Wow MOSFET RULEZ!!!
 
-##Too big power motor:##
+## Too big power motor: ##
 
 ![](https://raw.github.com/pavelmc/carrito/master/photos/big-motor.jpg)
 
 I prepared the chassis to hold a power motor that is just too big to power this little monster, it eat around 1A at 8.4V and can develop a lot of speed, in the first tries I realized that and discarded it in favor of a motor half the size of that; now it eats 600mA (0.6A) at full power and plenty of speed and power for the task
 
-##Direction Stepper motor to small##
+## Direction Stepper motor to small ##
 
 ![](https://raw.github.com/pavelmc/carrito/master/photos/small-stepper-motor.jpg)
 
@@ -86,7 +86,7 @@ I build the direction mechanism like an old car, moving the entire front wheels 
 
 I then moved to another stepper motor bigger and it happens to has a gear that is the same tooth pace that the main gear, this motor was from a Epson printer (is states in the chassis: EM-242) and its of bipolar type.
 
-##Direction stepper motor controller death##
+## Direction stepper motor controller death ##
 
 ![](https://raw.github.com/pavelmc/carrito/master/photos/allegro-controller-death.jpg)
 
@@ -96,7 +96,7 @@ Early test showed that the main Vcc of the motor was not enough for the task (it
 
 Testing other tricks I made a wrong connection and... it stopped working: R.I.P. A2917SEB. :(
 
-##Direction stepper motor controller death (yes, the second one)##
+## Direction stepper motor controller death (yes, the second one) ##
 
 Then I was forced to buy a controller, in the cuban market this is hard but fortunately I found a friend that has a A4899 Pololu controller available, just great!
 
@@ -110,9 +110,7 @@ This lead to discard the mentioned bipolar motor (I'm mad at bipolar motors... G
 
 The motor was again borrowed from the same printer, (MINEBEA or MNB brand, type 17PM-K303, and equivalent of a NEMA17 one) datasheet specs are 1.2A current and max 3.0V so my 6.0-8.4V is enough.
 
-##Not enough input/output pins, the case of the 74HC595##
-
-![](https://raw.github.com/pavelmc/carrito/master/photos/74HC595.jpg)
+## Not enough input/output pins, the case of the 74HC595 ##
 
 At some point I realized that I will have not enough input/output pins, and realizing that I have the hardware SPI bus on use I it to command a 74HC595 shift register.
 
